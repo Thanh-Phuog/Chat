@@ -4,6 +4,7 @@ import { createContext, useContext, useState, ReactNode } from 'react';
 
 interface User {
   username: string;
+  avatar: string;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);

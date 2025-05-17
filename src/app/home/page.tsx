@@ -1,5 +1,5 @@
 'use client';
-import HomeScreen from "@/components/screens/home/view/HomeScreen";
+import HomeScreen from "@/components/screens/home/HomeScreen";
 
 const HomePage = () => {
     return (
