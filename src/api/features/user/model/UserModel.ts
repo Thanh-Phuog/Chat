@@ -4,5 +4,6 @@ export interface UserModelRequest {
 
 export interface UserModelResponse {
   name: string;
-  token: string;
+  accessToken: string;
+   avatar?: string;
 }
