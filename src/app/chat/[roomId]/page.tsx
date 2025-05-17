@@ -9,3 +9,5 @@ const ChatPage = ({ params }: { params: { roomId: string } }) => {
     </div>
   );
 };
+
+export default ChatPage;
