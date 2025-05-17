@@ -5,7 +5,7 @@ const ChatPage = ({ params }: { params: { roomId: string } }) => {
 
   return (
     <div>
-      <ChatScreen roomId={roomId} />
+     <ChatScreen roomId={roomId} />
     </div>
   );
 };
