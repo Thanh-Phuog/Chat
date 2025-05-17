@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Input, Button, Typography, Space, message, Card, List, Avatar } from 'antd';
+import { Input, Button, Typography, Space, message, Card, List, Avatar, Badge } from 'antd';
 import { motion } from 'framer-motion';
 import { useUser } from '@/context/auth/useAuth';
 import io, { Socket } from 'socket.io-client';
@@ -12,14 +12,17 @@ const { Title, Text } = Typography;
 let socket: Socket;
 
 const ChatScreen = () => {
-  const [messages, setMessages] = useState<{ user: { username: string; avatar: string }; message: string }[]>([]);
-  const [inputMessage, setInputMessage] = useState(''); // Đổi từ message thành inputMessage
+  const [messages, setMessages] = useState<
+    { user: { username: string; avatar: string }; message: string }[]
+  >([]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [userCount, setUserCount] = useState(0);
   const { user } = useUser();
   const router = useRouter();
-  const { roomId } = useParams();
+  const params = useParams();
+  const roomId = Array.isArray(params.roomId) ? params.roomId[0] : params.roomId;
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Cuộn xuống tin nhắn mới nhất
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -30,42 +33,50 @@ const ChatScreen = () => {
       return;
     }
 
-    // Kết nối Socket.IO
-    socket = io('http://localhost:3001', { withCredentials: true });
-
-    // Tham gia phòng
-    socket.emit('join-room', { roomId, user });
-
-    // Lắng nghe người dùng tham gia
-    socket.on('user-joined', (joinedUser) => {
-      setMessages((prev) => [...prev, { user: joinedUser, message: `${joinedUser.username} đã tham gia phòng` }]);
+    socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001', {
+      withCredentials: true,
     });
 
-    // Lắng nghe tin nhắn mới
+    if (roomId) {
+      socket.emit('join-room', { roomId, user });
+    }
+
+    socket.on('user-joined', (joinedUser) => {
+      setMessages((prev) => [
+        ...prev,
+        { user: joinedUser, message: `${joinedUser.username} đã tham gia phòng` },
+      ]);
+    });
+
     socket.on('receive-message', ({ message, user }) => {
       setMessages((prev) => [...prev, { user, message }]);
     });
 
-    // Cleanup khi component unmount
+    socket.on('room-data', ({ userCount }) => {
+      setUserCount(userCount);
+    });
+
     return () => {
+      socket.off('user-joined');
+      socket.off('receive-message');
+      socket.off('room-data');
       socket.disconnect();
     };
   }, [user, roomId, router]);
 
-  // Cuộn xuống khi có tin nhắn mới
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
   const handleSendMessage = () => {
     if (!inputMessage.trim()) {
-      message.error('Vui lòng nhập tin nhắn!');  
+      message.error('Vui lòng nhập tin nhắn!');
       return;
     }
 
-    if (!user) return;
+    if (!user || !roomId) return;
 
-    socket.emit('send-message', { roomId, message: inputMessage, user });  
+    socket.emit('send-message', { roomId, message: inputMessage, user });
     setMessages((prev) => [...prev, { user, message: inputMessage }]);
     setInputMessage('');
   };
@@ -103,9 +114,14 @@ const ChatScreen = () => {
             <Title level={2} style={{ color: '#1890ff', marginBottom: 0, textAlign: 'center' }}>
               Phòng chat: {roomId}
             </Title>
-            <Avatar size={60} src={user.avatar} style={{ display: 'block', margin: '0 auto' }} />
-            <Text strong style={{ textAlign: 'center', display: 'block' }}>
-              {user.username}
+            <Space style={{ justifyContent: 'center', width: '100%' }}>
+              <Badge count={userCount} style={{ backgroundColor: '#52c41a' }}>
+                <Avatar size={60} src={user.avatar} />
+              </Badge>
+              <Text strong>{user.username}</Text>
+            </Space>
+            <Text type="secondary" style={{ textAlign: 'center', display: 'block' }}>
+              {userCount} người đang trong phòng
             </Text>
             <div
               style={{
@@ -134,7 +150,7 @@ const ChatScreen = () => {
             <Space style={{ width: '100%' }}>
               <Input
                 placeholder="Nhập tin nhắn"
-                value={inputMessage} // Sử dụng inputMessage
+                value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onPressEnter={handleSendMessage}
                 style={{ flex: 1, borderRadius: 8, padding: '10px' }}
