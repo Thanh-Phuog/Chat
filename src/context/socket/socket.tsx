@@ -1,4 +1,4 @@
-const { Server } = require('socket.io');
+import { Server, Socket } from 'socket.io';
 
 const io = new Server(3001, {
   cors: {
@@ -8,7 +8,7 @@ const io = new Server(3001, {
   },
 });
 
-io.on('connection', (socket) => {
+io.on('connection', (socket: Socket) => {
   console.log('User connected:', socket.id);
 
   // Tham gia phòng
