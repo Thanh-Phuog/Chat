@@ -6,6 +6,7 @@ import { Input, Button, Typography, Space, message, Card, Avatar } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import { useUser } from '@/context/auth/useAuth';
 import { motion } from 'framer-motion';
+import { defaultAuthenRepo } from '@/api/features/user/UserRepo';
 
 const { Title } = Typography;
 
@@ -19,20 +20,37 @@ const HomeScreen = () => {
   const { setUser } = useUser();
   const router = useRouter();
 
-  const handleStartChat = () => {
-    if (!name.trim()) {
-      message.error('Vui lòng nhập tên người dùng!');
-      return;
-    }
+const handleStartChat = async () => {
+  if (!name.trim()) {
+    message.error('Vui lòng nhập tên người dùng!');
+    return;
+  }
 
-    if (name.length < 3 || name.length > 20) {
-      message.error('Tên người dùng phải từ 3 đến 20 ký tự!');
-      return;
-    }
+  if (name.length < 3 || name.length > 20) {
+    message.error('Tên người dùng phải từ 3 đến 20 ký tự!');
+    return;
+  }
 
-    setUser({ username: name, avatar });
-    router.push('/selectroom'); 
-  };
+  try {
+    const response = await defaultAuthenRepo.login({ name: name });
+
+    if (!response.error) {
+      // Lưu thông tin user từ API
+      setUser(
+        {
+          username: name,
+          avatar: avatar,
+        }
+      ); 
+      router.push('/selectroom');
+    } else {
+      message.error(response.message || 'Đăng nhập thất bại!');
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    message.error('Lỗi kết nối đến máy chủ!');
+  }
+};
 
   const regenerateAvatar = () => {
     setAvatar(getRandomAvatar());
